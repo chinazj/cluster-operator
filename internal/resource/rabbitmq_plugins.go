@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	rabbitmqv1beta1 "github.com/rabbitmq/cluster-operator/api/v1beta1"
-	"github.com/rabbitmq/cluster-operator/internal/metadata"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -64,14 +63,6 @@ func (builder *RabbitmqResourceBuilder) RabbitmqPluginsConfigMapBuilder() *Rabbi
 }
 
 func (builder *RabbitmqPluginsConfigMapBuilder) Update(object runtime.Object) error {
-	configMap := object.(*corev1.ConfigMap)
-	configMap.Labels = metadata.GetLabels(builder.Instance.Name, builder.Instance.Labels)
-	configMap.Annotations = metadata.ReconcileAndFilterAnnotations(configMap.GetAnnotations(), builder.Instance.Annotations)
-
-	if configMap.Data == nil {
-		configMap.Data = make(map[string]string)
-	}
-	configMap.Data["enabled_plugins"] = pluginsValue(builder.Instance.Spec.Rabbitmq.AdditionalPlugins)
 	return nil
 }
 
