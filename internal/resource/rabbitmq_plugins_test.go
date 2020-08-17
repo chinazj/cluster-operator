@@ -116,18 +116,49 @@ var _ = Describe("RabbitMQPlugins", func() {
 						Name:      instance.Name,
 						Namespace: instance.Namespace,
 					},
-					Data: map[string]string{
-						"enabled_plugins": "[rabbitmq_peer_discovery_k8s,rabbitmq_shovel]",
-					},
 				}
 			})
 
-			It("does nothing", func() {
-				builder.Instance.Spec.Rabbitmq.AdditionalPlugins = []rabbitmqv1beta1.Plugin{"rabbitmq_management", "rabbitmq_management", "rabbitmq_shovel", "my_great_plugin"}
+			When("additionalPlugins are provided in instance spec", func() {
+				When("no previous data is present", func() {
+					It("creates data and sets enabled_plugins", func() {
+						builder.Instance.Spec.Rabbitmq.AdditionalPlugins = []rabbitmqv1beta1.Plugin{"rabbitmq_management", "rabbitmq_management", "rabbitmq_shovel", "my_great_plugin"}
 
-				err := configMapBuilder.Update(configMap)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(configMap.Data).To(HaveKeyWithValue("enabled_plugins", "[rabbitmq_peer_discovery_k8s,rabbitmq_shovel]"))
+						expectedEnabledPlugins := "[" +
+							"rabbitmq_peer_discovery_k8s," +
+							"rabbitmq_prometheus," +
+							"rabbitmq_management," +
+							"rabbitmq_shovel," +
+							"my_great_plugin]."
+
+						err := configMapBuilder.Update(configMap)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(configMap.Data).To(HaveKeyWithValue("enabled_plugins", expectedEnabledPlugins))
+					})
+				})
+
+				When("previous data is present", func() {
+					BeforeEach(func() {
+						configMap.Data = map[string]string{
+							"enabled_plugins": "[rabbitmq_peer_discovery_k8s,rabbitmq_shovel]",
+						}
+					})
+
+					It("updates enabled_plugins with unique list of default and additionalPlugins", func() {
+						builder.Instance.Spec.Rabbitmq.AdditionalPlugins = []rabbitmqv1beta1.Plugin{"rabbitmq_management", "rabbitmq_management", "rabbitmq_shovel", "my_great_plugin"}
+
+						expectedEnabledPlugins := "[" +
+							"rabbitmq_peer_discovery_k8s," +
+							"rabbitmq_prometheus," +
+							"rabbitmq_management," +
+							"rabbitmq_shovel," +
+							"my_great_plugin]."
+
+						err := configMapBuilder.Update(configMap)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(configMap.Data).To(HaveKeyWithValue("enabled_plugins", expectedEnabledPlugins))
+					})
+				})
 			})
 		})
 	})
